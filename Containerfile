@@ -15,7 +15,8 @@ RUN apk update && apk add --no-cache \
 # Install the Pi coding agent globally via npm
 RUN npm install -g --ignore-scripts @earendil-works/pi-coding-agent
 
-# Set the default working directory
+# Working directory is set per-project via podman -w
+# Base path for mounted project directories
 WORKDIR /wd
 
 # Start with the Pi coding agent

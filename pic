@@ -6,7 +6,9 @@
 IMAGE_NAME="pic:latest"
 AGENT_CONFIG_DIR="${HOME}/.config/pi-agent"
 # Generate a unique container name based on the current directory
-CONTAINER_NAME="pic_$(basename "$PWD" | tr -cd '[:alnum:]_')"
+PROJECT_SLUG="$(basename "$PWD" | tr -cd '[:alnum:]_')"
+CONTAINER_NAME="pic_${PROJECT_SLUG}"
+CONTAINER_WORKDIR="/wd/${PROJECT_SLUG}"
 
 # Ensure host config directory exists
 mkdir -p "$AGENT_CONFIG_DIR"
@@ -28,9 +30,9 @@ ensure_running() {
         podman run -dt \
             --name "$CONTAINER_NAME" \
             --userns=keep-id \
-            -v "$PWD:/wd:Z" \
+            -v "$PWD:${CONTAINER_WORKDIR}:Z" \
             -v "$AGENT_CONFIG_DIR:/home/node/.pi:Z" \
-            -w /wd \
+            -w "${CONTAINER_WORKDIR}" \
             "$IMAGE_NAME" > /dev/null
     fi
 }
