@@ -14,72 +14,14 @@ CONTAINER_WORKDIR="/wd/${PROJECT_SLUG}"
 mkdir -p "$AGENT_CONFIG_DIR"
 
 # ==========================================
-# Functions
+# Run
 # ==========================================
+echo "Starting Podman container: ${CONTAINER_NAME}..."
 
-ensure_running() {
-    if podman ps -a --format "{{.Names}}" | grep -Eq "^${CONTAINER_NAME}\$"; then
-        # If stopped, start it
-        if [ "$(podman inspect -f '{{.State.Running}}' "$CONTAINER_NAME")" == "false" ]; then
-            echo "Starting existing container: ${CONTAINER_NAME}..."
-            podman start "$CONTAINER_NAME" > /dev/null
-        fi
-    else
-        echo "Starting new Podman container: ${CONTAINER_NAME}..."
-        # Note: Mounting AGENT_CONFIG_DIR to $HOME/.pi so keep-id matches permissions
-        podman run -dt \
-            --name "$CONTAINER_NAME" \
-            --userns=keep-id \
-            -v "$PWD:${CONTAINER_WORKDIR}:Z" \
-            -v "$AGENT_CONFIG_DIR:/home/node/.pi:Z" \
-            -w "${CONTAINER_WORKDIR}" \
-            "$IMAGE_NAME" > /dev/null
-    fi
-}
-
-start_agent() {
-    ensure_running
-    echo "Done. Use 'pic attach' to view the agent."
-}
-
-attach_agent() {
-    if ! podman ps --format "{{.Names}}" | grep -Eq "^${CONTAINER_NAME}\$"; then
-        echo "Container is not running. Run 'pic start' first."
-        exit 1
-    fi
-    # Drop user into the agent's process
-    podman attach "$CONTAINER_NAME"
-}
-
-stop_agent() {
-    echo "Stopping container ${CONTAINER_NAME}..."
-    podman stop "$CONTAINER_NAME" > /dev/null
-    podman rm "$CONTAINER_NAME" > /dev/null
-    echo "Agent stopped and container removed."
-}
-
-# ==========================================
-# CLI Routing
-# ==========================================
-case "$1" in
-    start|up)
-        start_agent
-        ;;
-    attach)
-        attach_agent
-        ;;
-    stop|down)
-        stop_agent
-        ;;
-    status)
-        podman ps -f "name=${CONTAINER_NAME}"
-        ;;
-    "")
-        ensure_running
-        attach_agent
-        ;;
-    *)
-        echo "Usage: $(basename "$0") {start|attach|stop|status}"
-        exit 1
-        ;;
-esac
+podman run -it --rm \
+    --name "$CONTAINER_NAME" \
+    --userns=keep-id \
+    -v "$PWD:${CONTAINER_WORKDIR}:Z" \
+    -v "$AGENT_CONFIG_DIR:/home/node/.pi:Z" \
+    -w "${CONTAINER_WORKDIR}" \
+    "$IMAGE_NAME" pi "$@"
