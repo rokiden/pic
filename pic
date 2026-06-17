@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+
+# ==========================================
+# Configuration
+# ==========================================
+IMAGE_NAME="pic:latest"
+AGENT_CONFIG_DIR="${HOME}/.config/pi-agent"
+# Generate a unique container name based on the current directory
+CONTAINER_NAME="pic_$(basename "$PWD" | tr -cd '[:alnum:]_')"
+TMUX_SESSION="pi_session"
+
+# Ensure host config directory exists
+mkdir -p "$AGENT_CONFIG_DIR"
+
+# ==========================================
+# Functions
+# ==========================================
+
+start_agent() {
+    if podman ps -a --format "{{.Names}}" | grep -Eq "^${CONTAINER_NAME}\$"; then
+        echo "Container ${CONTAINER_NAME} already exists."
+        # If stopped, start it
+        if [ "$(podman inspect -f '{{.State.Running}}' "$CONTAINER_NAME")" == "false" ]; then
+            podman start "$CONTAINER_NAME" > /dev/null
+        fi
+    else
+        echo "Starting new Podman container: ${CONTAINER_NAME}..."
+        # Note: Mounting AGENT_CONFIG_DIR to $HOME/.pi so keep-id matches permissions
+        podman run -dt \
+            --name "$CONTAINER_NAME" \
+            --userns=keep-id \
+            -v "$PWD:/wd:Z" \
+            -v "$AGENT_CONFIG_DIR:/home/node/.pi:Z" \
+            -w /wd \
+            "$IMAGE_NAME" /bin/bash > /dev/null
+    fi
+
+    # Check if tmux session exists, if not, create it and start pi
+    if ! podman exec "$CONTAINER_NAME" tmux has-session -t "$TMUX_SESSION" 2>/dev/null; then
+        echo "Starting 'pi' inside tmux session..."
+        # Starts a detached tmux session and runs the 'pi' command
+        podman exec -d "$CONTAINER_NAME" tmux new-session -d -s "$TMUX_SESSION" 'pi'
+    else
+        echo "Agent is already running in tmux."
+    fi
+    echo "Done. Use 'pic attach' to view the agent."
+}
+
+attach_agent() {
+    if ! podman ps --format "{{.Names}}" | grep -Eq "^${CONTAINER_NAME}\$"; then
+        echo "Container is not running. Run 'pic start' first."
+        exit 1
+    fi
+    # Drop user into the tmux session
+    podman exec -it "$CONTAINER_NAME" tmux attach-session -t "$TMUX_SESSION"
+}
+
+stop_agent() {
+    echo "Stopping container ${CONTAINER_NAME}..."
+    podman stop "$CONTAINER_NAME" > /dev/null
+    podman rm "$CONTAINER_NAME" > /dev/null
+    echo "Agent stopped and container removed."
+}
+
+# ==========================================
+# CLI Routing
+# ==========================================
+case "$1" in
+    start|up)
+        start_agent
+        ;;
+    attach)
+        attach_agent
+        ;;
+    stop|down)
+        stop_agent
+        ;;
+    status)
+        podman ps -f "name=${CONTAINER_NAME}"
+        ;;
+    *)
+        echo "Usage: $(basename "$0") {start|attach|stop|status}"
+        exit 1
+        ;;
+esac
