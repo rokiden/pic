@@ -7,7 +7,6 @@ IMAGE_NAME="pic:latest"
 AGENT_CONFIG_DIR="${HOME}/.config/pi-agent"
 # Generate a unique container name based on the current directory
 CONTAINER_NAME="pic_$(basename "$PWD" | tr -cd '[:alnum:]_')"
-TMUX_SESSION="pi_session"
 
 # Ensure host config directory exists
 mkdir -p "$AGENT_CONFIG_DIR"
@@ -16,11 +15,11 @@ mkdir -p "$AGENT_CONFIG_DIR"
 # Functions
 # ==========================================
 
-start_agent() {
+ensure_running() {
     if podman ps -a --format "{{.Names}}" | grep -Eq "^${CONTAINER_NAME}\$"; then
-        echo "Container ${CONTAINER_NAME} already exists."
         # If stopped, start it
         if [ "$(podman inspect -f '{{.State.Running}}' "$CONTAINER_NAME")" == "false" ]; then
+            echo "Starting existing container: ${CONTAINER_NAME}..."
             podman start "$CONTAINER_NAME" > /dev/null
         fi
     else
@@ -32,17 +31,12 @@ start_agent() {
             -v "$PWD:/wd:Z" \
             -v "$AGENT_CONFIG_DIR:/home/node/.pi:Z" \
             -w /wd \
-            "$IMAGE_NAME" /bin/bash > /dev/null
+            "$IMAGE_NAME" > /dev/null
     fi
+}
 
-    # Check if tmux session exists, if not, create it and start pi
-    if ! podman exec "$CONTAINER_NAME" tmux has-session -t "$TMUX_SESSION" 2>/dev/null; then
-        echo "Starting 'pi' inside tmux session..."
-        # Starts a detached tmux session and runs the 'pi' command
-        podman exec -d "$CONTAINER_NAME" tmux new-session -d -s "$TMUX_SESSION" 'pi'
-    else
-        echo "Agent is already running in tmux."
-    fi
+start_agent() {
+    ensure_running
     echo "Done. Use 'pic attach' to view the agent."
 }
 
@@ -51,8 +45,8 @@ attach_agent() {
         echo "Container is not running. Run 'pic start' first."
         exit 1
     fi
-    # Drop user into the tmux session
-    podman exec -it "$CONTAINER_NAME" tmux attach-session -t "$TMUX_SESSION"
+    # Drop user into the agent's process
+    podman attach "$CONTAINER_NAME"
 }
 
 stop_agent() {
@@ -77,6 +71,10 @@ case "$1" in
         ;;
     status)
         podman ps -f "name=${CONTAINER_NAME}"
+        ;;
+    "")
+        ensure_running
+        attach_agent
         ;;
     *)
         echo "Usage: $(basename "$0") {start|attach|stop|status}"
