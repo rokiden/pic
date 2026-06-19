@@ -20,8 +20,7 @@ echo "Starting Podman container: ${CONTAINER_NAME}..."
 
 podman run -it --rm \
     --name "$CONTAINER_NAME" \
-    --userns=keep-id \
     -v "$PWD:${CONTAINER_WORKDIR}:Z" \
-    -v "$AGENT_CONFIG_DIR:/home/node/.pi:Z" \
+    -v "$AGENT_CONFIG_DIR:/root/.pi:Z" \
     -w "${CONTAINER_WORKDIR}" \
     "$IMAGE_NAME" pi "$@"
