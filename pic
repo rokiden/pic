@@ -27,7 +27,21 @@ fi
 
 # Generate a unique container name and working directory based on the mount source
 PROJECT_SLUG="$(basename "$MOUNT_SRC" | tr -cd '[:alnum:]_')"
-CONTAINER_NAME="pic_${PROJECT_SLUG}"
+BASE_CONTAINER_NAME="pic_${PROJECT_SLUG}"
+CONTAINER_NAME="$BASE_CONTAINER_NAME"
+
+# Append increasing index if container already exists
+if podman ps -a --format '{{.Names}}' | grep -qx "$CONTAINER_NAME"; then
+    INDEX=1
+    while [ "$INDEX" -le 10 ]; do
+        CONTAINER_NAME="${BASE_CONTAINER_NAME}_${INDEX}"
+        if ! podman ps -a --format '{{.Names}}' | grep -qx "$CONTAINER_NAME"; then
+            break
+        fi
+        ((INDEX++))
+    done
+fi
+
 CONTAINER_WORKDIR="/wd/${PROJECT_SLUG}"
 
 echo "Starting Podman container: ${CONTAINER_NAME}..."
