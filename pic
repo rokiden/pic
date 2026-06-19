@@ -1,27 +1,41 @@
 #!/usr/bin/env bash
 
-# ==========================================
-# Configuration
-# ==========================================
 IMAGE_NAME="pic:latest"
 AGENT_CONFIG_DIR="${HOME}/.config/pi-agent"
-# Generate a unique container name based on the current directory
-PROJECT_SLUG="$(basename "$PWD" | tr -cd '[:alnum:]_')"
-CONTAINER_NAME="pic_${PROJECT_SLUG}"
-CONTAINER_WORKDIR="/wd/${PROJECT_SLUG}"
 
 # Ensure host config directory exists
 mkdir -p "$AGENT_CONFIG_DIR"
 
-# ==========================================
-# Run
-# ==========================================
-echo "Starting Podman container: ${CONTAINER_NAME}..."
-echo "Mounting $PWD to ${CONTAINER_WORKDIR}..."
+# Check for --tmp flag
+USE_TMP=false
+ARGS=()
+for arg in "$@"; do
+    if [ "$arg" == "--tmp" ]; then
+        USE_TMP=true
+    else
+        ARGS+=("$arg")
+    fi
+done
 
-podman run -it --rm \
+if [ "$USE_TMP" = true ]; then
+    MOUNT_SRC=$(mktemp -d)
+    trap 'rm -rf "$MOUNT_SRC"' EXIT
+    echo "Using temporary directory: $MOUNT_SRC"
+else
+    MOUNT_SRC="$PWD"
+fi
+
+# Generate a unique container name and working directory based on the mount source
+PROJECT_SLUG="$(basename "$MOUNT_SRC" | tr -cd '[:alnum:]_')"
+CONTAINER_NAME="pic_${PROJECT_SLUG}"
+CONTAINER_WORKDIR="/wd/${PROJECT_SLUG}"
+
+echo "Starting Podman container: ${CONTAINER_NAME}..."
+echo "Mounting $MOUNT_SRC to ${CONTAINER_WORKDIR}..."
+
+podman run -it --rm --network host \
     --name "$CONTAINER_NAME" \
-    -v "$PWD:${CONTAINER_WORKDIR}:Z" \
+    -v "$MOUNT_SRC:${CONTAINER_WORKDIR}:Z" \
     -v "$AGENT_CONFIG_DIR:/root/.pi:Z" \
     -w "${CONTAINER_WORKDIR}" \
-    "$IMAGE_NAME" pi "$@"
+    "$IMAGE_NAME" pi "${ARGS[@]}"

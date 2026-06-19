@@ -10,7 +10,8 @@ RUN apk update && apk add --no-cache \
     curl \
     build-base \
     python3 \
-    vim
+    vim \
+    mandoc
 
 # Install the Pi coding agent globally via npm
 RUN npm install -g --ignore-scripts @earendil-works/pi-coding-agent
