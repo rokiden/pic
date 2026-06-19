@@ -17,6 +17,7 @@ mkdir -p "$AGENT_CONFIG_DIR"
 # Run
 # ==========================================
 echo "Starting Podman container: ${CONTAINER_NAME}..."
+echo "Mounting $PWD to ${CONTAINER_WORKDIR}..."
 
 podman run -it --rm \
     --name "$CONTAINER_NAME" \
