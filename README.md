@@ -45,6 +45,18 @@ pic chat "explain this code"  # Forwarded to: pi chat "explain this code"
 pic -p prompts/        # Pass any valid pi flag/arg
 ```
 
+## Aliases (Optional)
+
+Add these to your shell's profile (`~/.bashrc`, `~/.zshrc`, etc.) for convenience:
+
+```bash
+alias pic='~/Documents/pic/pic'
+alias pict='pic --tmp'
+```
+
+- `pic` — invokes the `pic` script from its install location
+- `pict` — runs `pic` in a temporary/interactive session via `--tmp`
+
 ## Internals
 
 Each container is named `pic_<project-slug>` where `<project-slug>` is the sanitized basename of `$PWD`. The project root is mounted at `/wd/<project-slug>`. This allows multiple projects to run concurrently (each with its own container) while sharing the same image.
