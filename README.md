@@ -6,8 +6,20 @@ A lightweight Podman wrapper that runs the [Pi coding agent](https://github.com/
 
 - Launches a fresh Alpine-based Node 26 container with `pi` pre-installed
 - Mounts the current project directory into `/wd/<project-slug>`
-- Shares your Pi agent config (`~/.config/pi-agent`) into the container at `/home/node/.pi`
+- Shares bundled agent config (`./config/`) into the container at `/root/.pi`
 - Automatically cleans up and removes the container on exit
+
+## Configuration
+
+The `pic` script ships with a self-contained agent configuration under `config/agent/`. This includes:
+
+- `AGENTS.md` — global coding instructions & workflow conventions
+- `git-workflow.md` — branch naming & commit message rules
+- `prompts/commit.md` — commit message template
+- `keybindings.json` — editor keybindings
+- `settings.json` — agent settings
+
+To customise the agent behavior, edit files in `config/agent/` directly.
 
 ## Prerequisites
 
@@ -41,7 +53,7 @@ Each container is named `pic_<project-slug>` where `<project-slug>` is the sanit
 ┌───────────── Podman ─────────────┐
 │  Container: pic_<slug>           │
 │                                  │
-│  /home/node/.pi  ← ~/.config/pi-agent  (rw)
+│  /root/.pi       ← ./config/              (rw bundled config)
 │  /wd/<slug>/     ← $PWD               (rw project)
 │                                  │
 │  CMD: pi "$@"                    │

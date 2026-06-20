@@ -1,0 +1,23 @@
+{
+  "lastChangelogVersion": "0.79.8",
+  "theme": "dark",
+  "defaultProvider": "server",
+  "defaultModel": "qwen3.6-35b-a3b-q6-ctx",
+  "defaultThinkingLevel": "off",
+  "doubleEscapeAction": "tree",
+  "hideThinkingBlock": false,
+  "packages": [
+    "npm:pi-token-speed"
+  ],
+  "tokenSpeed": {
+    "useProviderTokens": false,
+    "countStrategy": "direct",
+    "slidingWindow": 2000,
+    "display": "tps"
+  },
+  "steeringMode": "one-at-a-time",
+  "transport": "auto",
+  "enableInstallTelemetry": false,
+  "defaultProjectTrust": "ask",
+  "treeFilterMode": "all"
+}

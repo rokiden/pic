@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
 IMAGE_NAME="pic:latest"
-AGENT_CONFIG_DIR="${HOME}/.config/pi-agent"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+AGENT_CONFIG_DIR="${SCRIPT_DIR}/config"
 
 # Ensure host config directory exists
 mkdir -p "$AGENT_CONFIG_DIR"
