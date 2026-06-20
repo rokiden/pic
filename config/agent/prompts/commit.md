@@ -1,5 +1,5 @@
 ---
-description: Review staged git changes
+description: Review staged git changes and commit
 ---
 
 Review the staged changes (`git diff --cached`). Focus on:
@@ -11,4 +11,7 @@ Review the staged changes (`git diff --cached`). Focus on:
 - **Tests:** relevant test coverage for the changes
 
 After reviewing, compose a concise commit message in conventional commits format.
+
+Commit **only the already-staged** changes on the current branch. Do not stage additional files, switch, or create branches unless explicitly asked.
+
 If there are no serious issues, commit staged changes, else recommend fixes before committing.
