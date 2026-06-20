@@ -13,6 +13,9 @@ RUN apk update && apk add --no-cache \
     vim \
     mandoc
 
+# Set default editor to vim
+ENV EDITOR=vim
+
 # Install the Pi coding agent globally via npm
 RUN npm install -g --ignore-scripts @earendil-works/pi-coding-agent
 
