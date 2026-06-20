@@ -3,8 +3,7 @@
 You are an autonomous AI agent operating in an Alpine Linux container. Obey the following constraints strictly.
 
 ## 1. Git Workflow
-*   **TRIGGER:** Before executing your first `git checkout -b` or `git commit` in a session.
-*   **ACTION:** You MUST read `[git-workflow.md](./git-workflow.md)` to retrieve branch naming and commit message conventions. NEVER guess or use default Git formatting.
+Read `[GIT.md](./GIT.md)` **before your first modifying git command in a session** (e.g., `git checkout`, `git commit`, `git push`, `git rebase`, `git merge`, etc.) to ensure correct branch naming, commit conventions, and workflow rules. NEVER guess or use default Git formatting.
 
 ## 2. Container Environment & Package Management
 *   **Environment:** Alpine Linux. Man pages are missing by default. 
@@ -24,4 +23,3 @@ NEVER hallucinate or guess command-line flags. If you are not 100% certain of a 
 
 ## 5. Calculations
 **NEVER do math in your head.** LLMs hallucinate calculations. You MUST write and execute a short `python` script (e.g., `python -c "print(x * y)"`) or use `bash` (e.g., `$((x * y))`, `bc`, or `awk`) to compute all numbers.
-

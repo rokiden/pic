@@ -1,5 +1,9 @@
 # Git Workflow Guide — Coding Agent Instructions
 
+## No Unprompted Commits or Pushes
+**DO NOT execute `git commit` or `git push` unless the user explicitly asks you to.**
+Creating branches (`git checkout -b`) is allowed if needed for the task, but commits and pushes require explicit permission. If in doubt, ask the user before committing or pushing.
+
 ## Branch Naming
 
 When creating a new branch, use the following convention:
@@ -20,10 +24,6 @@ Examples:
 - `test/qam-tests`
 
 If there is no task ID, use the shortened form: `<PREFIX>/<TASK-TITLE>` (e.g., `feat/add-correlator`).
-
-### Pushing branches
-
-Always push new branches after creation to keep GitLab in sync.
 
 ---
 
@@ -59,15 +59,15 @@ Prefix every commit subject line with one of the following types:
 ## Quick Reference
 
 ```bash
-# Create & push a new branch
+# Create & push a new branch (only if asked)
 git checkout -b feat/FPG-123_write-style-guide
 git push -u origin feat/FPG-123_write-style-guide
 
-# Example commits
+# Example commits (only if asked)
 git commit -m "feat: implement correlator core"
 git commit -m "feat: add documentation for correlator"
 
-# Update branch with latest dev before MR
+# Update branch with latest dev before MR (only if asked)
 git fetch origin
 git rebase origin/dev
 ```
