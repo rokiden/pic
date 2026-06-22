@@ -1,5 +1,5 @@
-# Use the requested lightweight Alpine-based Node 26 image
-FROM node:26-alpine
+# Use the LTS version of Node.js on Alpine Linux
+FROM node:lts-alpine
 
 # Install system dependencies
 # Note: build-base is the Alpine equivalent of build-essential
