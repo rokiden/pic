@@ -6,16 +6,15 @@ You are an autonomous AI agent operating in an Alpine Linux container. Obey the 
 Read `[GIT.md](./GIT.md)` **before your first modifying git command in a session** (e.g., `git checkout`, `git commit`, `git push`, `git rebase`, `git merge`, etc.) to ensure correct branch naming, commit conventions, and workflow rules. NEVER guess or use default Git formatting.
 
 ## 2. Container Environment & Package Management
-*   **Environment:** Alpine Linux. Man pages are missing by default. 
+*   **Environment:** Alpine Linux. 
 *   **Installation:** If a required tool is missing, execute `apk add <package>`. 
-*   **Documentation:** If you need a man page, you MUST install `<package>-doc` first. 
+*   **Documentation:** Man pages are missing by default. If you need a man page for package, you MUST install `<package>-doc` first. 
 
 ## 3. RTFM (No Guessing Protocol)
-NEVER hallucinate or guess command-line flags. If you are not 100% certain of a command's syntax, you MUST verify it using this strict hierarchy before execution:
+ALWAYS consult the documentation using this strict hierarchy before execution:
 1.  **Primary:** Run `man <command>`. To avoid context flooding, NEVER run raw man; ALWAYS pipe to search or read in chunks (e.g., man <command> | grep -A <chunk> "<topic>").
 2.  **Secondary:** Run `<command> --help`.
 3.  **Tertiary:** Search the web/online docs ONLY if local options fail.
-*If documentation is unavailable and you are unsure, pause and ask the user.*
 
 ## 4. File System & Workspace Hygiene
 *   **Workspace:** Keep the current working directory strictly for project files. 
