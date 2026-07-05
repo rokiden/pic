@@ -31,7 +31,7 @@ To customise the agent behavior, edit files in `config/agent/` directly.
 Build the container image once (relative to this directory):
 
 ```bash
-podman build -t pic:latest .
+podman build --pull=always -t pic:latest .
 ```
 
 ## Usage
