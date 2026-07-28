@@ -28,10 +28,16 @@ To customise the agent behavior, edit files in `config/agent/` directly.
 
 ## Setup
 
-Build the container image once (relative to this directory):
+Pull the prebuilt image (rebuilt nightly via GitHub Actions when the base image or pi release changes):
 
 ```bash
-podman build --pull=always -t pic:latest .
+podman pull ghcr.io/rokiden/pic:latest
+```
+
+Or build it locally (relative to this directory):
+
+```bash
+podman build --pull=always -t ghcr.io/rokiden/pic:latest .
 ```
 
 ## Usage

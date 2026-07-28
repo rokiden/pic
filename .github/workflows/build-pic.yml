@@ -1,0 +1,75 @@
+name: Conditional Base Image Build (pic)
+
+on:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+env:
+  IMAGE_NAME: pic
+
+jobs:
+  check-and-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get upstream base image digest
+        id: upstream
+        # Skopeo checks the remote metadata without downloading the image layers
+        run: |
+          # Containerfile is FROM node:lts-alpine - update this if that tag changes
+          DIGEST=$(skopeo inspect docker://docker.io/library/node:lts-alpine | jq -r '.Digest')
+          echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
+          echo "Current upstream digest is $DIGEST"
+
+      - name: Get latest pi npm package version
+        id: pi
+        run: |
+          VERSION=$(curl -fsSL https://registry.npmjs.org/@earendil-works/pi-coding-agent/latest | jq -r '.version')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Latest pi npm version is $VERSION"
+
+      - name: Check against previous build
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: .build-key # Dummy file created later to satisfy the cache action
+          # The key changes whenever the base image or pi release updates OR a new commit is built
+          key: pic-${{ steps.upstream.outputs.digest }}-${{ steps.pi.outputs.version }}-${{ github.sha }}
+
+      - name: Set up Docker Buildx
+        # The 'if' prevents this and all subsequent steps from running when nothing changed
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Containerfile
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest
+          pull: true
+
+      - name: Create dummy file for cache storage
+        if: steps.cache.outputs.cache-hit != 'true'
+        # Creates the file specified in the 'cache' step so GitHub saves it at the end of the run
+        run: |
+          echo "${{ steps.upstream.outputs.digest }} ${{ steps.pi.outputs.version }}" > .build-key
