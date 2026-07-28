@@ -53,6 +53,10 @@ Prefix every commit subject line with one of the following types:
 - One commit = one logical change.
 - Use `wip` prefix for intermediate/temporary commits; clean them up before merging.
 - Do **not** use `--amend` on already-pushed commits.
+- If `user.name`/`user.email` are not configured (locally or globally), do **not** guess or invent an identity. Reuse the author of the previous commit via `--author="$(git log -1 --pretty=format:'%an <%ae>')"`, e.g.:
+  ```bash
+  git commit --author="$(git log -1 --pretty=format:'%an <%ae>')" -m "feat: ..."
+  ```
 
 ---
 
