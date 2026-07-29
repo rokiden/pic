@@ -49,6 +49,7 @@ echo "Starting Podman container: ${CONTAINER_NAME}..."
 echo "Mounting $MOUNT_SRC to ${CONTAINER_WORKDIR}..."
 
 podman run -it --rm --network host \
+    --log-driver=none \
     --name "$CONTAINER_NAME" \
     -v "$MOUNT_SRC:${CONTAINER_WORKDIR}:Z" \
     -v "$AGENT_CONFIG_DIR:/root/.pi:Z" \
