@@ -7,6 +7,11 @@ on:
   schedule:
     - cron: '0 2 * * *'
   workflow_dispatch:
+    inputs:
+      force-rebuild:
+        description: 'Force a rebuild and push, ignoring the cache skip'
+        type: boolean
+        default: false
 
 env:
   IMAGE_NAME: pic
@@ -37,16 +42,27 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Latest pi npm version is $VERSION"
 
+      - name: Compute cache key
+        id: cache-key
+        # The key changes whenever the base image or pi release updates OR a new commit is built.
+        # It is used for both restore and save, so a forced rebuild refreshes the same entry
+        # that normal scheduled/push runs consult.
+        run: |
+          echo "key=pic-${{ steps.upstream.outputs.digest }}-${{ steps.pi.outputs.version }}-${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
       - name: Check against previous build
         id: cache
-        uses: actions/cache@v4
+        # Skipped on force-rebuild so the cache always misses and the build runs;
+        # the result is still saved under the canonical key below.
+        if: github.event.inputs.force-rebuild != 'true'
+        uses: actions/cache/restore@v4
         with:
-          path: .build-key # Dummy file created later to satisfy the cache action
-          # The key changes whenever the base image or pi release updates OR a new commit is built
-          key: pic-${{ steps.upstream.outputs.digest }}-${{ steps.pi.outputs.version }}-${{ github.sha }}
+          path: .build-key # Dummy file; content is irrelevant, it only marks that a build happened
+          key: ${{ steps.cache-key.outputs.key }}
 
       - name: Set up Docker Buildx
-        # The 'if' prevents this and all subsequent steps from running when nothing changed
+        # Runs unless the cache hit (nothing changed). On force-rebuild the restore step
+        # above is skipped, so cache-hit is empty (not 'true') and these steps run too.
         if: steps.cache.outputs.cache-hit != 'true'
         uses: docker/setup-buildx-action@v3
 
@@ -70,6 +86,17 @@ jobs:
 
       - name: Create dummy file for cache storage
         if: steps.cache.outputs.cache-hit != 'true'
-        # Creates the file specified in the 'cache' step so GitHub saves it at the end of the run
+        # Only reached if the build succeeded - a failed build stops the job before here
         run: |
           echo "${{ steps.upstream.outputs.digest }} ${{ steps.pi.outputs.version }}" > .build-key
+
+      - name: Save cache (only after successful build)
+        if: steps.cache.outputs.cache-hit != 'true'
+        # Default condition is success(), so a failed build skips this step and the
+        # cache key is NOT stored - the next run will build again instead of skipping.
+        # Forced runs also save here under the canonical key; if that entry already
+        # exists the save is a harmless no-op (logged as a warning).
+        uses: actions/cache/save@v4
+        with:
+          path: .build-key
+          key: ${{ steps.cache-key.outputs.key }}
