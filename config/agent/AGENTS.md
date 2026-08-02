@@ -2,9 +2,6 @@
 
 Obey the following constraints strictly.
 
-##  Git Workflow
-Read /root/.pi/agent/GIT.md **before your first modifying git command in a session** (e.g., `git checkout`, `git commit`, `git push`, `git rebase`, `git merge`, etc.) to ensure correct branch naming, commit conventions, and workflow rules. NEVER guess or use default Git formatting.
-
 ## Container Environment & Package Management
 - You are jailed into Alpine Linux Container. 
 - If a required tool is missing, install it using bash command `apk add <package>`. 
