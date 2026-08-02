@@ -11,7 +11,8 @@ RUN apk update && apk add --no-cache \
     build-base \
     python3 \
     vim \
-    mandoc
+    mandoc \
+    ripgrep
 
 # Set default editor to vim
 ENV EDITOR=vim
