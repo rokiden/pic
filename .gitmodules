@@ -1,0 +1,3 @@
+[submodule "config/agent/extensions/todo"]
+	path = config/agent/extensions/todo
+	url = https://github.com/rokiden/pi-todo.git
