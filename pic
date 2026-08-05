@@ -3,6 +3,7 @@
 IMAGE_NAME="ghcr.io/rokiden/pic:latest"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 AGENT_CONFIG_DIR="${SCRIPT_DIR}/config"
+APK_CACHE_VOLUME="${PIC_APK_CACHE_VOLUME:-pic_apk_cache}"
 
 # Ensure host config directory exists
 mkdir -p "$AGENT_CONFIG_DIR"
@@ -55,7 +56,8 @@ podman run -it --rm --network host \
     --cpus $CPU --memory=$MEM --memory-swap=$MEM \
     --log-driver=none \
     --name "$CONTAINER_NAME" \
-    -v "$MOUNT_SRC:${CONTAINER_WORKDIR}:Z" \
-    -v "$AGENT_CONFIG_DIR:/root/.pi:Z" \
+    -v "$MOUNT_SRC:${CONTAINER_WORKDIR}:z" \
+    -v "$AGENT_CONFIG_DIR:/root/.pi:z" \
+    -v "$APK_CACHE_VOLUME:/var/cache/apk:z" \
     -w "${CONTAINER_WORKDIR}" \
     "$IMAGE_NAME" pi "${ARGS[@]}"

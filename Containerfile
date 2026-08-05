@@ -15,6 +15,10 @@ RUN apk update && apk add --no-cache \
     mandoc \
     ripgrep
 
+# Enable package caching for runtime apk installs. pic mounts a persistent
+# Podman volume at /var/cache/apk.
+RUN ln -s /var/cache/apk /etc/apk/cache
+
 # Set default editor to vim
 ENV EDITOR=vim
 

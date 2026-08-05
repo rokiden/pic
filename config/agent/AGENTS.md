@@ -4,7 +4,7 @@ Obey the following constraints strictly.
 
 ## Container Environment & Package Management
 - You are jailed into Alpine Linux Container. 
-- If a required tool is missing, install it using bash command `apk add <package>`. 
+- If a required tool is missing, install it with `apk add <package>` (without `--no-cache`) so downloaded packages can be cached. The container has a persistent APK cache. Avoid clearing the cache.
 - Man pages are missing by default. If you need a man page for package, you MUST install `<package>-doc` first. 
 
 ## RTFM (No Guessing Protocol)
