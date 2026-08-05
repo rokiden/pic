@@ -58,10 +58,34 @@ Add these to your shell's profile (`~/.bashrc`, `~/.zshrc`, etc.) for convenienc
 ```bash
 alias pic='~/Documents/pic/pic'
 alias pict='pic --tmp'
+alias pic_hostops='~/Documents/pic/hostops.sh'
 ```
 
 - `pic` — invokes the `pic` script from its install location
 - `pict` — runs `pic` in a temporary/interactive session via `--tmp`
+- `pic_hostops` — starts `hostops.sh` from its install location
+
+## HostOps
+
+`hostops.sh` is a localhost-only command bridge that lets the agent run predefined operations on the host, optionally with root privileges—for example, VM management. Every `CMD_*` environment variable is exposed as a lowercase, hyphen-separated command. It listens on port `8765` by default; pass another port as the first argument to override it. `ncat` is required on the host and is included in the `pic` image for agent use.
+
+```bash
+CMD_VM_REBOOT='virsh reboot vm' pic_hostops
+
+echo vm-reboot | ncat --no-shutdown 127.0.0.1 8765
+```
+
+Commands execute in the host shell, so expose only trusted, deliberately predefined operations and keep the server bound to localhost. If root access is required, run the server with sudo.
+
+### Agent usage
+
+Tell the agent it can perform host operations when needed. For example, the `CMD_VM_REBOOT` operation defined above can be requested with this prompt:
+
+```text
+You can reboot the VM when needed. Run the predefined host operation with:
+echo vm-reboot | ncat --no-shutdown 127.0.0.1 8765
+Report the returned result.
+```
 
 ## Internals
 

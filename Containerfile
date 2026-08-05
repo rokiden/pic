@@ -10,6 +10,7 @@ RUN apk update && apk add --no-cache \
     curl \
     build-base \
     python3 \
+    nmap-ncat \
     vim \
     mandoc \
     ripgrep
