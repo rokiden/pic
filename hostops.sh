@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 # HostOps — lightweight local shell-command server.
-# Uses a self-referencing ncat handler and no temporary files.
+# Uses a self-referencing socat handler and no temporary files.
 # Binds to 127.0.0.1:8765 by default; override with listen=HOST:PORT.
 # Every CMD_* environment variable becomes a command. For example:
 #   CMD_VM_REBOOT_BIOS='virsh ...; qemu-img ... && virsh ...' ./hostops.sh
 # The variable above is served as the command "vm-reboot-bios".
+# Server uses socat (never exposes the raw client socket to CMD_* commands
+# or anything they background). Client can be any TCP tool; ncat needs
+# --no-shutdown to keep reading after stdin closes:
 # Client: echo vm-reboot-bios | ncat --no-shutdown 127.0.0.1 8765
 # Usage:
 #   ./hostops.sh [sudo] [listen=HOST:PORT]
@@ -28,7 +31,7 @@ set -euo pipefail
 # - print a fatal error
 # - exit with the supplied status
 # Usage:
-#   die "ncat is required" 127
+#   die "socat is required" 127
 die() {
     local _message=$1
     local _status=${2:-1}
@@ -43,7 +46,6 @@ die() {
 # - populate PORT, LISTEN_HOST, and USE_SUDO
 # Notes:
 # - accepts arguments in any order
-# - accepts bracketed IPv6 hosts, such as [::1]:8765
 # Usage:
 #   parse_args "$@"
 parse_args() {
@@ -59,11 +61,7 @@ parse_args() {
             case "$_key" in
                 listen)
                     [[ -n "$_value" ]] || die 'listen= requires HOST:PORT'
-                    if [[ "$_value" == \[*\]:* ]]; then
-                        _host=${_value%%\]:*}
-                        _host=${_host#\[}
-                        _port=${_value##*:}
-                    elif [[ "$_value" == *:* ]]; then
+                    if [[ "$_value" == *:* ]]; then
                         _host=${_value%:*}
                         _port=${_value##*:}
                     else
@@ -143,7 +141,7 @@ available_commands() {
 }
 
 if [[ "${HOSTOPS_HANDLER:-}" == "1" ]]; then
-    # ─────────────── HANDLER MODE (ncat -e fork) ───────────────
+    # ─────────────── HANDLER MODE (socat EXEC fork) ───────────────
     # CMD_VM_REBOOT_BIOS is exposed as the command vm-reboot-bios:
     # uppercase the request and replace hyphens with underscores to find
     # the corresponding shell variable.
@@ -162,7 +160,7 @@ if [[ "${HOSTOPS_HANDLER:-}" == "1" ]]; then
 
     if [[ -n "$variable" && -v "$variable" ]]; then
         command_string=${!variable}
-        if result=$(bash -c "$command_string" "$cmd" 2>&1); then
+        if result=$(bash -c "$command_string" "$cmd" </dev/null 2>&1); then
             :
         else
             status=$?
@@ -189,8 +187,8 @@ if ((USE_SUDO == 1)); then
     restart_with_sudo
 fi
 
-if ! command -v ncat >/dev/null 2>&1; then
-    die 'ncat is required in server mode' 127
+if ! command -v socat >/dev/null 2>&1; then
+    die 'socat is required in server mode' 127
 fi
 
 printf '🐧 HostOps server on %s:%s (Ctrl+C)\n' "$LISTEN_HOST" "$PORT" >&2
@@ -199,7 +197,9 @@ printf 'Available commands: %s\n' "$(available_commands)" >&2
 trap 'exit' INT TERM
 
 while true; do
-    if HOSTOPS_HANDLER=1 ncat --listen --keep-open -e "$SCRIPT" "$LISTEN_HOST" "$PORT"; then
+    # -t3600: keep waiting on slow CMD_* commands instead of giving up 0.5s
+    # (socat's default) after the client's side of the connection hits EOF.
+    if HOSTOPS_HANDLER=1 socat -t3600 "TCP-LISTEN:$PORT,bind=$LISTEN_HOST,reuseaddr,fork" EXEC:"$SCRIPT"; then
         status=0
     else
         status=$?
