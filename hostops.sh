@@ -1,30 +1,144 @@
 #!/usr/bin/env bash
 # HostOps — lightweight local shell-command server.
 # Uses a self-referencing ncat handler and no temporary files.
-# Binds to 127.0.0.1 only (localhost).
+# Binds to 127.0.0.1:8765 by default; override with listen=HOST:PORT.
 # Every CMD_* environment variable becomes a command. For example:
-#   CMD_VM_REBOOT_BIOS='virsh ...; qemu-img ... && virsh ...' ./hostops.sh 8765
+#   CMD_VM_REBOOT_BIOS='virsh ...; qemu-img ... && virsh ...' ./hostops.sh
 # The variable above is served as the command "vm-reboot-bios".
 # Client: echo vm-reboot-bios | ncat --no-shutdown 127.0.0.1 8765
+# Usage:
+#   ./hostops.sh [sudo] [listen=HOST:PORT]
+#
+# Arguments may be supplied in any order.
+#
+# Functions:
+#   die                  MESSAGE [STATUS]  print a fatal error and exit
+#   parse_args           ARGS...           parse server arguments
+#   restart_with_sudo                      restart the server as root
+#   available_commands                      print the exposed commands
 
-set -uo pipefail
+set -euo pipefail
 
-available_commands() {
-    local variable suffix
-    local -a commands=()
+##############################################################################
+# functions
+##############################################################################
 
-    while IFS= read -r variable; do
-        [[ "$variable" =~ ^CMD_[A-Za-z0-9_]+$ ]] || continue
-        suffix=${variable#CMD_}
-        suffix=${suffix,,}
-        commands+=("${suffix//_/-}")
+# die #######################################################################
+# Actions:
+# - print a fatal error
+# - exit with the supplied status
+# Usage:
+#   die "ncat is required" 127
+die() {
+    local _message=$1
+    local _status=${2:-1}
+
+    printf 'hostops.sh: %s\n' "$_message" >&2
+    exit "$_status"
+}
+
+# parse_args #################################################################
+# Actions:
+# - parse the optional listen=HOST:PORT and sudo arguments
+# - populate PORT, LISTEN_HOST, and USE_SUDO
+# Notes:
+# - accepts arguments in any order
+# - accepts bracketed IPv6 hosts, such as [::1]:8765
+# Usage:
+#   parse_args "$@"
+parse_args() {
+    local _arg _key _value _host _port
+
+    while (($# > 0)); do
+        _arg=$1
+        shift
+
+        if [[ "$_arg" == *=* ]]; then
+            _key=${_arg%%=*}
+            _value=${_arg#*=}
+            case "$_key" in
+                listen)
+                    [[ -n "$_value" ]] || die 'listen= requires HOST:PORT'
+                    if [[ "$_value" == \[*\]:* ]]; then
+                        _host=${_value%%\]:*}
+                        _host=${_host#\[}
+                        _port=${_value##*:}
+                    elif [[ "$_value" == *:* ]]; then
+                        _host=${_value%:*}
+                        _port=${_value##*:}
+                    else
+                        die 'listen= requires HOST:PORT'
+                    fi
+                    [[ -n "$_host" ]] || die 'listen= requires a host'
+                    [[ "$_port" =~ ^[0-9]+$ ]] || die 'listen= requires a numeric port'
+                    LISTEN_HOST=$_host
+                    PORT=$_port
+                    ;;
+                *)
+                    die "unknown argument: $_arg"
+                    ;;
+            esac
+        elif [[ "$_arg" == 'sudo' ]]; then
+            USE_SUDO=1
+        else
+            die "unknown argument: $_arg"
+        fi
+    done
+}
+
+# restart_with_sudo #########################################################
+# Actions:
+# - preserve CMD_* variables
+# - restart the server with root privileges
+# Usage:
+#   restart_with_sudo
+restart_with_sudo() {
+    local _variable
+    local _preserved_env=
+    local -a _cmd_env_names=()
+    local -a _sudo_args=("listen=$LISTEN_HOST:$PORT")
+
+    while IFS= read -r _variable; do
+        [[ "$_variable" =~ ^CMD_[A-Za-z0-9_]+$ ]] || continue
+        _cmd_env_names+=("$_variable")
     done < <(compgen -A variable CMD_)
 
-    if ((${#commands[@]} == 0)); then
+    printf 'HostOps: restarting with sudo (host %s, port %s; preserving %d CMD_* variables).\n' \
+        "$LISTEN_HOST" "$PORT" "${#_cmd_env_names[@]}" >&2
+
+    if ((${#_cmd_env_names[@]} > 0)); then
+        for _variable in "${_cmd_env_names[@]}"; do
+            [[ -z "$_preserved_env" ]] || _preserved_env+=,
+            _preserved_env+="$_variable"
+        done
+        exec sudo --preserve-env="$_preserved_env" "$SCRIPT" "${_sudo_args[@]}"
+    fi
+
+    exec sudo "$SCRIPT" "${_sudo_args[@]}"
+}
+
+# available_commands #########################################################
+# Actions:
+# - print the exposed command names
+# - print (none) when no commands are configured
+# Usage:
+#   available_commands
+available_commands() {
+    local _variable _suffix
+    local -a _commands=()
+
+    while IFS= read -r _variable; do
+        [[ "$_variable" =~ ^CMD_[A-Za-z0-9_]+$ ]] || continue
+        _suffix=${_variable#CMD_}
+        _suffix=${_suffix,,}
+        _commands+=("${_suffix//_/-}")
+    done < <(compgen -A variable CMD_)
+
+    if ((${#_commands[@]} == 0)); then
         printf '%s' '(none)'
     else
         local IFS=' '
-        printf '%s' "${commands[*]}"
+        printf '%s' "${_commands[*]}"
     fi
 }
 
@@ -66,46 +180,30 @@ fi
 # ─────────────── SERVER MODE (original process) ───────────────
 SCRIPT="$(readlink -f "$0")"
 
-if [[ "${1:-}" == "sudo" ]]; then
-    shift
+PORT=8765
+LISTEN_HOST=127.0.0.1
+USE_SUDO=0
+parse_args "$@"
 
-    # sudo normally resets the environment. Preserve exactly the CMD_*
-    # variables that define the commands, rather than the entire environment.
-    cmd_env_names=()
-    while IFS= read -r variable; do
-        [[ "$variable" =~ ^CMD_[A-Za-z0-9_]+$ ]] || continue
-        cmd_env_names+=("$variable")
-    done < <(compgen -A variable CMD_)
-
-    printf 'HostOps: restarting with sudo (port %s; preserving %d CMD_* variables).\n' \
-        "${1:-8765}" "${#cmd_env_names[@]}" >&2
-
-    if ((${#cmd_env_names[@]} > 0)); then
-        preserved_env=
-        for variable in "${cmd_env_names[@]}"; do
-            [[ -z "$preserved_env" ]] || preserved_env+=,
-            preserved_env+="$variable"
-        done
-        exec sudo --preserve-env="$preserved_env" "$SCRIPT" "$@"
-    fi
-
-    exec sudo "$SCRIPT" "$@"
+if ((USE_SUDO == 1)); then
+    restart_with_sudo
 fi
 
 if ! command -v ncat >/dev/null 2>&1; then
-    printf '%s\n' 'hostops.sh: ncat is required in server mode' >&2
-    exit 127
+    die 'ncat is required in server mode' 127
 fi
 
-PORT="${1:-8765}"
-echo "🐧 HostOps server on 127.0.0.1:$PORT (Ctrl+C)" >&2
-echo "Available commands: $(available_commands)" >&2
+printf '🐧 HostOps server on %s:%s (Ctrl+C)\n' "$LISTEN_HOST" "$PORT" >&2
+printf 'Available commands: %s\n' "$(available_commands)" >&2
 
 trap 'exit' INT TERM
 
 while true; do
-    HOSTOPS_HANDLER=1 ncat --listen --keep-open -e "$SCRIPT" 127.0.0.1 "$PORT"
-    status=$?
+    if HOSTOPS_HANDLER=1 ncat --listen --keep-open -e "$SCRIPT" "$LISTEN_HOST" "$PORT"; then
+        status=0
+    else
+        status=$?
+    fi
     printf 'HostOps listener exited with status %d; retrying in 1 second.\n' "$status" >&2
     sleep 1
 done
