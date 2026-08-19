@@ -67,18 +67,21 @@ alias pic_hostops='~/Documents/pic/hostops.sh'
 
 ## HostOps
 
-`hostops.sh` is a localhost-only command bridge that lets the agent run predefined operations on the host, optionally with root privileges—for example, VM management. Every `CMD_*` environment variable is exposed as a lowercase, hyphen-separated command. It listens on port `8765` by default; pass another port as the first argument to override it, or pass `sudo` to restart the server with root privileges. `ncat` is required on the host and is included in the `pic` image for agent use.
+`hostops.sh` is a command bridge that lets the agent run predefined operations on the host, optionally with root privileges—for example, VM management. Every `CMD_*` environment variable is exposed as a lowercase, hyphen-separated command. It listens on `127.0.0.1:8765` by default; pass `listen=HOST:PORT` and/or `sudo` in any order to override the default or restart the server with root privileges. `ncat` is required on the host and is included in the `pic` image for agent use.
 
 ```bash
 CMD_VM_REBOOT='virsh reboot vm' pic_hostops
 
 echo vm-reboot | ncat --no-shutdown 127.0.0.1 8765
+
+# Listen on all interfaces (use only when remote access is intentional).
+CMD_VM_REBOOT='virsh reboot vm' pic_hostops listen=0.0.0.0:8765
 ```
 
-Commands execute in the host shell, so expose only trusted, deliberately predefined operations and keep the server bound to localhost. If root access is required, use the `sudo` mode so the `CMD_*` definitions are preserved:
+Commands execute in the host shell, so expose only trusted, deliberately predefined operations. Keep the server bound to localhost unless remote access is intentional. If root access is required, use the `sudo` mode so the `CMD_*` definitions are preserved:
 
 ```bash
-CMD_VM_REBOOT='virsh reboot vm' pic_hostops sudo
+CMD_VM_REBOOT='virsh reboot vm' pic_hostops sudo listen=127.0.0.1:8765
 ```
 
 ### Agent usage
