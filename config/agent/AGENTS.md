@@ -19,3 +19,6 @@ ALWAYS consult the documentation using this strict hierarchy before execution:
 
 ## Calculations
 **NEVER do math in your head.** You MUST write and execute a short `python` script (e.g., `python -c "print(x * y)"`) or use `bash` (e.g., `$((x * y))`, `bc`, or `awk`) to compute all numbers.
+
+## Harness improvement
+Propose to the user improvements for unclear, incomplete, or incorrect skill or AGENTS.md rules.
