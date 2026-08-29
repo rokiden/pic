@@ -6,6 +6,7 @@ Obey the following constraints strictly.
 - You are jailed into Alpine Linux Container. 
 - If a required tool is missing, install it with `apk add <package>` (without `--no-cache`) so downloaded packages can be cached. The container has a persistent APK cache. Avoid clearing the cache.
 - Man pages are missing by default. If you need a man page for package, you MUST install `<package>-doc` first. 
+- The `podman-remote` command is available in this container. It can manage the host's containers and images ONLY if the user started the session with `--pic-podman` (host podman socket mounted at `/run/podman/podman.sock`); verify with `podman-remote info` before use.
 
 ## RTFM (No Guessing Protocol)
 ALWAYS consult the documentation using this strict hierarchy before execution:

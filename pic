@@ -8,15 +8,34 @@ APK_CACHE_VOLUME="${PIC_APK_CACHE_VOLUME:-pic_apk_cache}"
 # Ensure host config directory exists
 mkdir -p "$AGENT_CONFIG_DIR"
 
-# Check for --tmp flag
+# Check for --pic-tmp, --pic-podman and --pic flags
 USE_TMP=false
+USE_PODMAN=false
 ARGS=()
-for arg in "$@"; do
-    if [ "$arg" == "--tmp" ]; then
-        USE_TMP=true
-    else
-        ARGS+=("$arg")
-    fi
+PIC_ARGS=()
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --pic-tmp)
+            USE_TMP=true
+            shift
+            ;;
+        --pic-podman)
+            USE_PODMAN=true
+            shift
+            ;;
+        --pic)
+            shift
+            if [[ $# -gt 0 && "$1" != --* ]]; then
+                # Evaluate next arg as a quoted string of podman args
+                eval "PIC_ARGS=(\$1)"
+                shift
+            fi
+            ;;
+        *)
+            ARGS+=("$1")
+            shift
+            ;;
+    esac
 done
 
 if [ "$USE_TMP" = true ]; then
@@ -25,6 +44,26 @@ if [ "$USE_TMP" = true ]; then
     echo "Using temporary directory: $MOUNT_SRC"
 else
     MOUNT_SRC="$PWD"
+fi
+
+# With --pic-podman, start the host's socket-activated user podman service and
+# mount its socket so the container's podman-remote client can reach it.
+if [ "$USE_PODMAN" = true ]; then
+    XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+    HOST_PODMAN_SOCK="$XDG_RUNTIME_DIR/podman/podman.sock"
+    if ! systemctl --user start podman.socket; then
+        echo "Error: systemctl --user start podman.socket failed" >&2
+        exit 1
+    fi
+    if [ ! -S "$HOST_PODMAN_SOCK" ]; then
+        echo "Error: podman socket not found at $HOST_PODMAN_SOCK" >&2
+        exit 1
+    fi
+    PIC_ARGS+=(
+        -v "$HOST_PODMAN_SOCK:/run/podman/podman.sock"
+        -e CONTAINER_HOST=unix:///run/podman/podman.sock
+    )
+    echo "Mounting podman socket: $HOST_PODMAN_SOCK to /run/podman/podman.sock"
 fi
 
 # Generate a unique container name and working directory based on the mount source
@@ -60,4 +99,5 @@ podman run -it --rm --network host \
     -v "$AGENT_CONFIG_DIR:/root/.pi:z" \
     -v "$APK_CACHE_VOLUME:/var/cache/apk:z" \
     -w "${CONTAINER_WORKDIR}" \
+    "${PIC_ARGS[@]}" \
     "$IMAGE_NAME" pi "${ARGS[@]}"

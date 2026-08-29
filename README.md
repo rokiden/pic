@@ -7,6 +7,7 @@ A lightweight Podman wrapper that runs the [Pi coding agent](https://github.com/
 - Launches a fresh Alpine-based Node 26 container with `pi` pre-installed
 - Mounts the current project directory into `/wd/<project-slug>`
 - Shares bundled agent config (`./config/`) into the container at `/root/.pi`
+- With `--pic-podman`, exposes the host's user podman socket so the container's `podman-remote` client can manage host containers
 - Automatically cleans up and removes the container on exit
 
 ## Configuration
@@ -51,18 +52,25 @@ pic chat "explain this code"  # Forwarded to: pi chat "explain this code"
 pic -p prompts/        # Pass any valid pi flag/arg
 ```
 
+## Flags
+
+Two flags are consumed by `pic` itself; every other argument is forwarded to `pi`:
+
+- `--pic-tmp` — run in a fresh temporary directory instead of `$PWD` (removed on exit)
+- `--pic-podman` — start the host's socket-activated user podman service (`systemctl --user start podman.socket`) and mount the user podman socket into the container, so the `podman-remote` client preinstalled in the image can manage the host's containers. The host socket `$XDG_RUNTIME_DIR/podman/podman.sock` is mounted at `/run/podman/podman.sock` and `CONTAINER_HOST=unix:///run/podman/podman.sock` is set inside the container.
+
 ## Aliases (Optional)
 
 Add these to your shell's profile (`~/.bashrc`, `~/.zshrc`, etc.) for convenience:
 
 ```bash
 alias pic='~/Documents/pic/pic'
-alias pict='pic --tmp'
+alias pict='pic --pic-tmp'
 alias pic_hostops='~/Documents/pic/hostops.sh'
 ```
 
 - `pic` — invokes the `pic` script from its install location
-- `pict` — runs `pic` in a temporary/interactive session via `--tmp`
+- `pict` — runs `pic` in a temporary/interactive session via `--pic-tmp`
 - `pic_hostops` — starts `hostops.sh` from its install location
 
 ## HostOps
@@ -104,6 +112,7 @@ Each container is named `pic_<project-slug>` where `<project-slug>` is the sanit
 │                                  │
 │  /root/.pi       ← ./config/              (rw bundled config)
 │  /wd/<slug>/     ← $PWD               (rw project)
+│  /run/podman/    ← $XDG_RUNTIME_DIR/podman/podman.sock  (rw, only with --pic-podman)
 │                                  │
 │  CMD: pi "$@"                    │
 └──────────────────────────────────┘
