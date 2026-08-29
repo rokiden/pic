@@ -1,9 +1,9 @@
 {
-  "lastChangelogVersion": "0.83.0",
+  "lastChangelogVersion": "0.84.4",
   "theme": "dark",
-  "defaultProvider": "github-copilot",
-  "defaultModel": "gpt-5.6-luna",
-  "defaultThinkingLevel": "max",
+  "defaultProvider": "llama-swap",
+  "defaultModel": "qwen3.8-27b:175k4s",
+  "defaultThinkingLevel": "medium",
   "doubleEscapeAction": "tree",
   "hideThinkingBlock": true,
   "packages": [
@@ -13,7 +13,8 @@
     "npm:pi-ask-user",
     "npm:@tintinweb/pi-subagents",
     "npm:@howaboua/pi-smart-btw",
-    "npm:pi-openrouter-session"
+    "npm:pi-openrouter-session",
+    "npm:@gaurav-321/pi-local-llm"
   ],
   "extensions": [
     "~/.pi/agent/extensions/todo/index.ts"

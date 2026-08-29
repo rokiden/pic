@@ -1,0 +1,32 @@
+{
+  "providers": {
+    "llama-swap": {
+      "modelOverrides": {
+        "qwen3.8-27b-old:170k4s": {
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": null,
+            "high": null,
+            "max": null,
+            "xhigh": "xhigh"
+          },
+          "compat": {
+            "supportsReasoningEffort": true
+          }
+        },
+        "qwen3.8-27b:175k4s": {
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": null,
+            "high": null,
+            "max": null,
+            "xhigh": "xhigh"
+          },
+          "compat": {
+            "supportsReasoningEffort": true
+          }
+        }
+      }
+    }
+  }
+}
