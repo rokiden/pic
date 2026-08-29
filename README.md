@@ -52,6 +52,20 @@ pic chat "explain this code"  # Forwarded to: pi chat "explain this code"
 pic -p prompts/        # Pass any valid pi flag/arg
 ```
 
+## Session cleanup
+
+Sessions are stored under `~/.pi/agent/sessions/`, grouped by project. To delete sessions with no activity in the last two weeks:
+
+```bash
+find ~/.pi/agent/sessions -name "*.jsonl" -mtime +14 -delete
+```
+
+To also remove the left-behind empty per-project directories:
+
+```bash
+find ~/.pi/agent/sessions -mindepth 1 -type d -empty -delete
+```
+
 ## Flags
 
 Two flags are consumed by `pic` itself; every other argument is forwarded to `pi`:
