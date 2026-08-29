@@ -5,9 +5,9 @@ description: Git workflow conventions — branch naming, commit message prefixes
 
 # Git Workflow Guide — Coding Agent Instructions
 
-## No Unprompted Commits or Pushes
-**DO NOT execute `git commit` or `git push` unless the user explicitly asks you to.**
-Creating branches (`git checkout -b`) is allowed if needed for the task, but commits and pushes require explicit permission. If in doubt, ask the user before committing or pushing.
+## No Unprompted Stage, Commit, Push
+**DO NOT stage, commit, or push unless the user explicitly asks you to.**
+Creating branches (`git checkout -b`) is allowed if needed for the task, but commits and pushes require explicit permission. If in doubt, ask the user before staging, committing, or pushing.
 
 ## Branch Naming
 
