@@ -13,6 +13,7 @@ RUN apk update && apk add --no-cache \
     vim \
     mandoc \
     ripgrep \
+    grep \
     nmap-ncat \
     podman-remote \
     findutils
