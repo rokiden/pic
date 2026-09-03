@@ -1,6 +1,6 @@
 sessions
 bin
-models.json
 trust.json
 auth.json*
 models-store.json
+pi-llama-swap.json

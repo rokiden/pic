@@ -10,10 +10,13 @@ RUN apk update && apk add --no-cache \
     curl \
     build-base \
     python3 \
-    nmap-ncat \
     vim \
     mandoc \
-    ripgrep
+    ripgrep \
+    grep \
+    nmap-ncat \
+    podman-remote \
+    findutils
 
 # Enable package caching for runtime apk installs. pic mounts a persistent
 # Podman volume at /var/cache/apk.

@@ -7,6 +7,7 @@ A lightweight Podman wrapper that runs the [Pi coding agent](https://github.com/
 - Launches a fresh Alpine-based Node 26 container with `pi` pre-installed
 - Mounts the current project directory into `/wd/<project-slug>`
 - Shares bundled agent config (`./config/`) into the container at `/root/.pi`
+- With `--pic-podman`, exposes the host's user podman socket so the container's `podman-remote` client can manage host containers
 - Automatically cleans up and removes the container on exit
 
 ## Configuration
@@ -51,34 +52,58 @@ pic chat "explain this code"  # Forwarded to: pi chat "explain this code"
 pic -p prompts/        # Pass any valid pi flag/arg
 ```
 
+## Session cleanup
+
+Sessions are stored under `~/.pi/agent/sessions/`, grouped by project. To delete sessions with no activity in the last two weeks:
+
+```bash
+find ~/.pi/agent/sessions -name "*.jsonl" -mtime +14 -delete
+```
+
+To also remove the left-behind empty per-project directories:
+
+```bash
+find ~/.pi/agent/sessions -mindepth 1 -type d -empty -delete
+```
+
+## Flags
+
+Two flags are consumed by `pic` itself; every other argument is forwarded to `pi`:
+
+- `--pic-tmp` — run in a fresh temporary directory instead of `$PWD` (removed on exit)
+- `--pic-podman` — start the host's socket-activated user podman service (`systemctl --user start podman.socket`) and mount the user podman socket into the container, so the `podman-remote` client preinstalled in the image can manage the host's containers. The host socket `$XDG_RUNTIME_DIR/podman/podman.sock` is mounted at `/run/podman/podman.sock` and `CONTAINER_HOST=unix:///run/podman/podman.sock` is set inside the container.
+
 ## Aliases (Optional)
 
 Add these to your shell's profile (`~/.bashrc`, `~/.zshrc`, etc.) for convenience:
 
 ```bash
 alias pic='~/Documents/pic/pic'
-alias pict='pic --tmp'
+alias pict='pic --pic-tmp'
 alias pic_hostops='~/Documents/pic/hostops.sh'
 ```
 
 - `pic` — invokes the `pic` script from its install location
-- `pict` — runs `pic` in a temporary/interactive session via `--tmp`
+- `pict` — runs `pic` in a temporary/interactive session via `--pic-tmp`
 - `pic_hostops` — starts `hostops.sh` from its install location
 
 ## HostOps
 
-`hostops.sh` is a localhost-only command bridge that lets the agent run predefined operations on the host, optionally with root privileges—for example, VM management. Every `CMD_*` environment variable is exposed as a lowercase, hyphen-separated command. It listens on port `8765` by default; pass another port as the first argument to override it, or pass `sudo` to restart the server with root privileges. `ncat` is required on the host and is included in the `pic` image for agent use.
+`hostops.sh` is a command bridge that lets the agent run predefined operations on the host, optionally with root privileges—for example, VM management. Every `CMD_*` environment variable is exposed as a lowercase, hyphen-separated command. It listens on `127.0.0.1:8765` by default; pass `listen=HOST:PORT` and/or `sudo` in any order to override the default or restart the server with root privileges. `ncat` is required on the host and is included in the `pic` image for agent use.
 
 ```bash
 CMD_VM_REBOOT='virsh reboot vm' pic_hostops
 
 echo vm-reboot | ncat --no-shutdown 127.0.0.1 8765
+
+# Listen on all interfaces (use only when remote access is intentional).
+CMD_VM_REBOOT='virsh reboot vm' pic_hostops listen=0.0.0.0:8765
 ```
 
-Commands execute in the host shell, so expose only trusted, deliberately predefined operations and keep the server bound to localhost. If root access is required, use the `sudo` mode so the `CMD_*` definitions are preserved:
+Commands execute in the host shell, so expose only trusted, deliberately predefined operations. Keep the server bound to localhost unless remote access is intentional. If root access is required, use the `sudo` mode so the `CMD_*` definitions are preserved:
 
 ```bash
-CMD_VM_REBOOT='virsh reboot vm' pic_hostops sudo
+CMD_VM_REBOOT='virsh reboot vm' pic_hostops sudo listen=127.0.0.1:8765
 ```
 
 ### Agent usage
@@ -101,6 +126,7 @@ Each container is named `pic_<project-slug>` where `<project-slug>` is the sanit
 │                                  │
 │  /root/.pi       ← ./config/              (rw bundled config)
 │  /wd/<slug>/     ← $PWD               (rw project)
+│  /run/podman/    ← $XDG_RUNTIME_DIR/podman/podman.sock  (rw, only with --pic-podman)
 │                                  │
 │  CMD: pi "$@"                    │
 └──────────────────────────────────┘
