@@ -1,20 +1,20 @@
 {
-  "lastChangelogVersion": "0.84.4",
+  "lastChangelogVersion": "1.1.0",
   "theme": "dark",
-  "defaultProvider": "llama-swap",
-  "defaultModel": "qwen3.8-27b:175k4s",
-  "defaultThinkingLevel": "medium",
+  "defaultProvider": "github-copilot",
+  "defaultModel": "gpt-6.1-sol",
+  "defaultThinkingLevel": "high",
   "doubleEscapeAction": "tree",
   "hideThinkingBlock": true,
   "packages": [
     "npm:pi-token-speed",
     "npm:pi-web-access",
     "npm:pi-ultra-compact",
-    "npm:pi-ask-user",
     "npm:@tintinweb/pi-subagents",
     "npm:@howaboua/pi-smart-btw",
     "npm:pi-openrouter-session",
-    "npm:@gaurav-321/pi-local-llm"
+    "npm:@gaurav-321/pi-local-llm",
+    "npm:@juicesharp/rpiv-ask-user-question"
   ],
   "extensions": [
     "~/.pi/agent/extensions/todo/index.ts"
@@ -26,7 +26,7 @@
     "display": "stats",
     "endTpsBehavior": "average"
   },
-  "steeringMode": "one-at-a-time",
+  "steeringMode": "all",
   "transport": "auto",
   "enableInstallTelemetry": false,
   "defaultProjectTrust": "ask",
