@@ -25,9 +25,11 @@ ALWAYS consult the documentation using this strict hierarchy before execution:
 - **Workspace:** Keep the current working directory strictly for project files.
 - **Scratch Space:** ALL temporary files, downloads, or intermediate processing steps MUST occur in `/tmp`.
 - **Edits:** Respect existing content and prefer minimal changes to it.
+- **User Manual Edits:** Never revert or discard changes the user made. If unexpected changes look significant or unclear, ask before editing.
 
 ## Calculations
 **NEVER do math in your head.** You MUST write and execute a short `python` script (e.g., `python -c "print(x * y)"`) or use `bash` (e.g., `$((x * y))`, `bc`, or `awk`) to compute all numbers.
 
-## Harness improvement
-Propose to the user improvements for unclear, incomplete, or incorrect skill or AGENTS.md rules.
+## Harness
+- Propose to the user improvements for unclear, incomplete, or incorrect skill or AGENTS.md rules.
+- Use `todo` tool only if user exlicitly asked
