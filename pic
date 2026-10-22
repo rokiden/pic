@@ -25,10 +25,13 @@ while [[ $# -gt 0 ]]; do
             ;;
         --pic)
             shift
-            if [[ $# -gt 0 && "$1" != --* ]]; then
+            if [[ $# -gt 0 ]]; then
                 # Evaluate next arg as a quoted string of podman args
                 eval "PIC_ARGS=(\$1)"
                 shift
+            else
+                echo "Error: --pic requires an argument" >&2
+                exit 1
             fi
             ;;
         *)
@@ -92,6 +95,7 @@ MEM=4G
 CPU=4
 
 podman run -it --rm --network host \
+    --entrypoint pi \
     --cpus $CPU --memory=$MEM --memory-swap=$MEM \
     --log-driver=none \
     --name "$CONTAINER_NAME" \
@@ -100,4 +104,4 @@ podman run -it --rm --network host \
     -v "$APK_CACHE_VOLUME:/var/cache/apk:z" \
     -w "${CONTAINER_WORKDIR}" \
     "${PIC_ARGS[@]}" \
-    "$IMAGE_NAME" pi "${ARGS[@]}"
+    "$IMAGE_NAME" "${ARGS[@]}"
