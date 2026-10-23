@@ -1,5 +1,5 @@
 # Use the LTS version of Node.js on Alpine Linux
-FROM node:lts-alpine
+FROM docker.io/node:lts-alpine
 
 # Install system dependencies
 # Note: build-base is the Alpine equivalent of build-essential
@@ -25,12 +25,12 @@ RUN ln -s /var/cache/apk /etc/apk/cache
 # Set default editor to vim
 ENV EDITOR=vim
 
-# Install the Pi coding agent globally via npm
+# Install the Pi coding agent and Pi Web globally via npm
 RUN npm install -g --ignore-scripts @earendil-works/pi-coding-agent
+RUN npm install -g --ignore-scripts @agegr/pi-web@latest
+# Rebuild only node-pty from source for Alpine compatibility.
+RUN npm_config_build_from_source=true npm rebuild -g node-pty --foreground-scripts
 
 # Working directory is set per-project via podman -w
 # Base path for mounted project directories
 WORKDIR /wd
-
-# Start with the Pi coding agent
-CMD ["pi"]
