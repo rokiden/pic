@@ -4,6 +4,8 @@ IMAGE_NAME="ghcr.io/rokiden/pic:latest"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 AGENT_CONFIG_DIR="${SCRIPT_DIR}/config"
 APK_CACHE_VOLUME="${PIC_APK_CACHE_VOLUME:-pic_apk_cache}"
+MEM="${PIC_MEM:-4G}"
+CPU="${PIC_CPU:-4}"
 
 # Ensure host config directory exists
 mkdir -p "$AGENT_CONFIG_DIR"
@@ -91,12 +93,9 @@ CONTAINER_WORKDIR="/wd/${PROJECT_SLUG}"
 echo "Starting Podman container: ${CONTAINER_NAME}..."
 echo "Mounting $MOUNT_SRC to ${CONTAINER_WORKDIR}..."
 
-MEM=4G
-CPU=4
-
 podman run -it --rm --network host \
     --entrypoint pi \
-    --cpus $CPU --memory=$MEM --memory-swap=$MEM \
+    --cpus "$CPU" --memory="$MEM" --memory-swap="$MEM" \
     --log-driver=none \
     --name "$CONTAINER_NAME" \
     -v "$MOUNT_SRC:${CONTAINER_WORKDIR}:z" \
