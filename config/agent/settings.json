@@ -1,31 +1,20 @@
 {
-  "lastChangelogVersion": "1.1.0",
+  "lastChangelogVersion": "1.4.0",
   "theme": "dark",
   "defaultProvider": "github-copilot",
-  "defaultModel": "gpt-6.1-sol",
+  "defaultModel": "gpt-6-luna",
   "defaultThinkingLevel": "high",
   "doubleEscapeAction": "tree",
   "hideThinkingBlock": true,
   "packages": [
-    "npm:pi-token-speed",
     "npm:pi-web-access",
     "npm:pi-ultra-compact",
     "npm:@tintinweb/pi-subagents",
-    "npm:@howaboua/pi-smart-btw",
     "npm:pi-openrouter-session",
     "npm:@gaurav-321/pi-local-llm",
     "npm:@juicesharp/rpiv-ask-user-question"
   ],
-  "extensions": [
-    "~/.pi/agent/extensions/todo/index.ts"
-  ],
-  "tokenSpeed": {
-    "useProviderTokens": false,
-    "countStrategy": "direct",
-    "slidingWindow": 2000,
-    "display": "stats",
-    "endTpsBehavior": "average"
-  },
+  "extensions": [],
   "steeringMode": "all",
   "transport": "auto",
   "enableInstallTelemetry": false,
@@ -39,16 +28,12 @@
     "enabled": true
   },
   "enabledModels": [
-    "openrouter/~deepseek/deepseek-v4-flash-latest",
-    "github-copilot/gpt-5.6-luna",
-    "openrouter/openai/gpt-5.6-luna",
+    "github-copilot/gpt-6-luna",
     "github-copilot/gpt-5.6-terra",
-    "openrouter/openai/gpt-5.6-terra",
-    "llama-swap/qwen3.8-27b:175k4s",
-    "openrouter/z-ai/glm-5.3-flash",
-    "openrouter/~z-ai/glm-latest",
     "github-copilot/claude-sonnet-5",
     "github-copilot/grok-4.6",
-    "github-copilot/kimi-k3"
+    "github-copilot/kimi-k3",
+    "openrouter/~deepseek/deepseek-v4-flash-latest",
+    "openrouter/~z-ai/glm-latest"
   ]
 }
