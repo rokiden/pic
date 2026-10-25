@@ -14,9 +14,12 @@ RUN apk update && apk add --no-cache \
     mandoc \
     ripgrep \
     grep \
+    shellcheck \
+    jq \
     nmap-ncat \
     podman-remote \
-    findutils
+    findutils \
+    fd
 
 # Enable package caching for runtime apk installs. pic mounts a persistent
 # Podman volume at /var/cache/apk.
