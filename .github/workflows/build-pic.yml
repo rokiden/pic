@@ -52,7 +52,7 @@ jobs:
             VERSIONS+=("$VERSION")
           done
 
-          VERSIONS_STRING=$(IFS=,; echo "${VERSIONS[*]}")
+          VERSIONS_STRING=$(IFS=_; echo "${VERSIONS[*]}")
           echo "versions=$VERSIONS_STRING" >> "$GITHUB_OUTPUT"
 
       - name: Compute cache key
