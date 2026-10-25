@@ -4,37 +4,65 @@ IMAGE_NAME="ghcr.io/rokiden/pic:latest"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 AGENT_CONFIG_DIR="${SCRIPT_DIR}/config"
 APK_CACHE_VOLUME="${PIC_APK_CACHE_VOLUME:-pic_apk_cache}"
+MEM="${PIC_MEM:-4G}"
+CPU="${PIC_CPU:-4}"
+
+find_free_port() {
+    local _port=$1
+    local _listeners
+    _listeners=$(ss -H -ltn) || {
+        printf '%s\n' "Error: could not inspect listening TCP ports" >&2
+        exit 1
+    }
+    while ((_port <= 65535)); do
+        if ! grep -Eq "[[:space:]][^[:space:]]+:${_port}[[:space:]]" <<<"$_listeners"; then
+            printf '%s\n' "$_port"
+            return 0
+        fi
+        _port=$((_port + 1))
+    done
+    printf '%s\n' "Error: no available TCP port at or above the requested start port" >&2
+    return 1
+}
 
 # Ensure host config directory exists
 mkdir -p "$AGENT_CONFIG_DIR"
 
-# Check for --pic-tmp, --pic-podman and --pic flags
+# Check for wrapper-specific flags
 USE_TMP=false
 USE_PODMAN=false
+USE_WEB=false
 ARGS=()
 PIC_ARGS=()
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --pic-tmp)
-            USE_TMP=true
+    --pic-tmp)
+        USE_TMP=true
+        shift
+        ;;
+    --pic-podman)
+        USE_PODMAN=true
+        shift
+        ;;
+    --pic-web)
+        USE_WEB=true
+        shift
+        ;;
+    --pic)
+        shift
+        if [[ $# -gt 0 ]]; then
+            # Evaluate next arg as a quoted string of podman args
+            eval "PIC_ARGS=(\$1)"
             shift
-            ;;
-        --pic-podman)
-            USE_PODMAN=true
-            shift
-            ;;
-        --pic)
-            shift
-            if [[ $# -gt 0 && "$1" != --* ]]; then
-                # Evaluate next arg as a quoted string of podman args
-                eval "PIC_ARGS=(\$1)"
-                shift
-            fi
-            ;;
-        *)
-            ARGS+=("$1")
-            shift
-            ;;
+        else
+            echo "Error: --pic requires an argument" >&2
+            exit 1
+        fi
+        ;;
+    *)
+        ARGS+=("$1")
+        shift
+        ;;
     esac
 done
 
@@ -68,31 +96,68 @@ fi
 
 # Generate a unique container name and working directory based on the mount source
 PROJECT_SLUG="$(basename "$MOUNT_SRC" | tr -cd '[:alnum:]_')"
-BASE_CONTAINER_NAME="pic_${PROJECT_SLUG}"
-CONTAINER_NAME="$BASE_CONTAINER_NAME"
-
-# Append increasing index if container already exists
-if podman ps -a --format '{{.Names}}' | grep -qx "$CONTAINER_NAME"; then
-    INDEX=1
-    while [ "$INDEX" -le 10 ]; do
-        CONTAINER_NAME="${BASE_CONTAINER_NAME}_${INDEX}"
-        if ! podman ps -a --format '{{.Names}}' | grep -qx "$CONTAINER_NAME"; then
-            break
-        fi
-        ((INDEX++))
-    done
-fi
-
 CONTAINER_WORKDIR="/wd/${PROJECT_SLUG}"
+
+if [[ "$USE_WEB" = true ]]; then
+    if [[ "$USE_TMP" = true ]]; then
+        echo "Error: --pic-tmp cannot be combined with --pic-web" >&2
+        exit 1
+    fi
+
+    if [[ ${#ARGS[@]} -gt 0 ]]; then
+        echo "Error: Pi arguments cannot be used with --pic-web" >&2
+        exit 1
+    fi
+
+    ENTRYPOINT="pi-web"
+    CONTAINER_NAME="picweb_${PROJECT_SLUG}"
+    if CONTAINER_ENV=$(podman inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$CONTAINER_NAME" 2>/dev/null); then
+        WEB_PORT=""
+        while IFS= read -r _env; do
+            case "$_env" in
+            PORT=*) WEB_PORT=${_env#PORT=} ;;
+            esac
+        done <<<"$CONTAINER_ENV"
+        if [[ ! "$WEB_PORT" =~ ^[0-9]{1,5}$ ]] || ((10#$WEB_PORT < 1 || 10#$WEB_PORT > 65535)); then
+            echo "Error: existing container $CONTAINER_NAME has no valid PORT environment variable" >&2
+            exit 1
+        fi
+        printf 'Pi Web container %s already exists; URL: http://127.0.0.1:%s\n' "$CONTAINER_NAME" "$WEB_PORT"
+        exit 0
+    fi
+
+    SESSION_DIR="${MOUNT_SRC}/.pi/sessions"
+    mkdir -p "$SESSION_DIR"
+    WEB_PORT=$(find_free_port 8000) || exit 1
+    PIC_ARGS+=(
+        -d
+        -e "PI_WEB_NO_OPEN=1"
+        -e "PORT=$WEB_PORT"
+        -v "$SESSION_DIR:/root/.pi/agent/sessions:z"
+    )
+else # Regular Pi container
+    ENTRYPOINT="pi"
+    BASE_CONTAINER_NAME="pic_${PROJECT_SLUG}"
+    # Append increasing index if container already exists
+    CONTAINER_NAME="$BASE_CONTAINER_NAME"
+    if podman ps -a --format '{{.Names}}' | grep -qx "$CONTAINER_NAME"; then
+        INDEX=1
+        while [ "$INDEX" -le 10 ]; do
+            CONTAINER_NAME="${BASE_CONTAINER_NAME}_${INDEX}"
+            if ! podman ps -a --format '{{.Names}}' | grep -qx "$CONTAINER_NAME"; then
+                break
+            fi
+            ((INDEX++))
+        done
+    fi
+fi
 
 echo "Starting Podman container: ${CONTAINER_NAME}..."
 echo "Mounting $MOUNT_SRC to ${CONTAINER_WORKDIR}..."
 
-MEM=4G
-CPU=4
-
 podman run -it --rm --network host \
-    --cpus $CPU --memory=$MEM --memory-swap=$MEM \
+    --entrypoint "$ENTRYPOINT" \
+    --cpus "$CPU" --memory="$MEM" --memory-swap="$MEM" \
     --log-driver=none \
     --name "$CONTAINER_NAME" \
     -v "$MOUNT_SRC:${CONTAINER_WORKDIR}:z" \
@@ -100,4 +165,8 @@ podman run -it --rm --network host \
     -v "$APK_CACHE_VOLUME:/var/cache/apk:z" \
     -w "${CONTAINER_WORKDIR}" \
     "${PIC_ARGS[@]}" \
-    "$IMAGE_NAME" pi "${ARGS[@]}"
+    "$IMAGE_NAME" "${ARGS[@]}" || exit $?
+
+if [[ "$USE_WEB" = true ]]; then
+    printf 'Pi Web URL: http://127.0.0.1:%s\n' "$WEB_PORT"
+fi

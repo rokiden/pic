@@ -37,20 +37,34 @@ jobs:
           echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
           echo "Current upstream digest is $DIGEST"
 
-      - name: Get latest pi npm package version
-        id: pi
+      - name: Get latest npm package versions
+        id: packages
         run: |
-          VERSION=$(curl -fsSL https://registry.npmjs.org/@earendil-works/pi-coding-agent/latest | jq -r '.version')
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "Latest pi npm version is $VERSION"
+          PACKAGES=(
+            "@earendil-works/pi-coding-agent"
+            "@agegr/pi-web"
+          )
+          VERSIONS=()
+
+          for PACKAGE in "${PACKAGES[@]}"; do
+            VERSION=$(curl -fsSL "https://registry.npmjs.org/${PACKAGE}/latest" | jq -er '.version')
+            echo "Latest ${PACKAGE} npm version is ${VERSION}"
+            VERSIONS+=("$VERSION")
+          done
+
+          VERSIONS_STRING=$(IFS=,; echo "${VERSIONS[*]}")
+          echo "versions=$VERSIONS_STRING" >> "$GITHUB_OUTPUT"
 
       - name: Compute cache key
         id: cache-key
-        # The key changes whenever the base image or pi release updates OR a new commit is built.
+        # The key changes whenever the base image, any checked npm package, or a new commit changes.
         # It is used for both restore and save, so a forced rebuild refreshes the same entry
         # that normal scheduled/push runs consult.
+        env:
+          UPSTREAM_DIGEST: ${{ steps.upstream.outputs.digest }}
+          PACKAGE_VERSIONS: ${{ steps.packages.outputs.versions }}
         run: |
-          echo "key=pic-${{ steps.upstream.outputs.digest }}-${{ steps.pi.outputs.version }}-${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          echo "key=pic-${UPSTREAM_DIGEST}-${PACKAGE_VERSIONS}-${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
 
       - name: Check against previous build
         id: cache
@@ -89,8 +103,11 @@ jobs:
       - name: Create dummy file for cache storage
         if: steps.cache.outputs.cache-hit != 'true'
         # Only reached if the build succeeded - a failed build stops the job before here
+        env:
+          UPSTREAM_DIGEST: ${{ steps.upstream.outputs.digest }}
+          PACKAGE_VERSIONS: ${{ steps.packages.outputs.versions }}
         run: |
-          echo "${{ steps.upstream.outputs.digest }} ${{ steps.pi.outputs.version }}" > .build-key
+          echo "${UPSTREAM_DIGEST} ${PACKAGE_VERSIONS}" > .build-key
 
       - name: Save cache (only after successful build)
         if: steps.cache.outputs.cache-hit != 'true'
