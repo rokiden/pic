@@ -35,5 +35,8 @@
     "github-copilot/kimi-k3",
     "openrouter/~deepseek/deepseek-v4-flash-latest",
     "openrouter/~z-ai/glm-latest"
+  ],
+  "defaultTools": [
+    "+codemode"
   ]
 }

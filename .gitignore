@@ -1,3 +1,4 @@
 *.swp
 config/web-search.json
 config/web-search-cache
+config/agent/web-search-cache
