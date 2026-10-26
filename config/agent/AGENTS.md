@@ -14,12 +14,6 @@ Obey the following constraints strictly.
 - If a required tool is missing, install it with `apk add <package>` (without `--no-cache`) so downloaded packages can be cached. The container has a persistent APK cache. Avoid clearing the cache.
 - Man pages are missing by default. If you need a man page for package, you MUST install `<package>-doc` first. 
 
-## Check the Docs First
-ALWAYS consult the documentation using this strict hierarchy before execution:
-1. **Primary:** Run `man <command>`. To avoid context flooding, NEVER run raw man; ALWAYS pipe to search or read in chunks (e.g., man <command> | grep -A <chunk> "<topic>").
-2. **Secondary:** Run `<command> --help`.
-3. **Tertiary:** Search the web/online docs ONLY if local options fail.
-
 ## File System & Workspace Hygiene
 - **Workspace:** Keep the current working directory strictly for project files.
 - **Scratch Space:** ALL temporary files, downloads, or intermediate processing steps MUST occur in `/tmp`.
