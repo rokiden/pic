@@ -5,6 +5,7 @@ A lightweight Podman wrapper that runs the [Pi coding agent](https://github.com/
 ## What it does
 
 - Launches a fresh Alpine-based Node.js LTS container with `pi` pre-installed
+- Includes full rootless Podman and `fuse-overlayfs` for nested container work
 - Mounts the current project directory into `/wd/<project-slug>`
 - Shares bundled agent config (`./config/`) into the container at `/root/.pi`
 - With `--pic-podman`, exposes the host's user podman socket so the container's `podman-remote` client can manage host containers

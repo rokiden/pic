@@ -6,20 +6,22 @@ FROM docker.io/node:lts-alpine
 # bash is added because the wrapper script explicitly relies on /bin/bash
 RUN apk update && apk add --no-cache \
     bash \
-    git \
-    curl \
     build-base \
-    python3 \
-    vim \
-    mandoc \
-    ripgrep \
-    grep \
-    shellcheck \
-    jq \
-    nmap-ncat \
-    podman-remote \
+    curl \
+    fd \
     findutils \
-    fd
+    fuse-overlayfs \
+    git \
+    grep \
+    jq \
+    mandoc \
+    nmap-ncat \
+    podman \
+    podman-remote \
+    python3 \
+    ripgrep \
+    shellcheck \
+    vim
 
 # Use Bash as root's login shell.
 RUN sed -i 's#^root:x:0:0:root:/root:/bin/sh$#root:x:0:0:root:/root:/bin/bash#' /etc/passwd
@@ -27,6 +29,16 @@ RUN sed -i 's#^root:x:0:0:root:/root:/bin/sh$#root:x:0:0:root:/root:/bin/bash#' 
 # Enable package caching for runtime apk installs. pic mounts a persistent
 # Podman volume at /var/cache/apk.
 RUN ln -s /var/cache/apk /etc/apk/cache
+
+# Podman-in-podman configuration: https://github.com/podman-container-tools/image_build/blob/main/podman
+# _CONTAINERS_USERNS_CONFIGURED and BUILDAH_ISOLATION are unnecessary for this setup.
+ADD /src/containers.conf /etc/containers/containers.conf
+
+# Configure the dedicated rootless Podman user.
+RUN adduser -D -u 1001 -s /bin/bash podman
+ADD /src/user-containers.conf /home/podman/.config/containers/containers.conf
+RUN chown podman:podman -R /home/podman && \
+    echo 'podman:2000:65536' | tee -a /etc/subuid /etc/subgid >/dev/null
 
 # Set default editor to vim
 ENV EDITOR=vim

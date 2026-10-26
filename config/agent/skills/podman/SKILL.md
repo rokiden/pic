@@ -1,6 +1,6 @@
 ---
 name: podman
-description: "Build and run OCI images with rootless Podman in restricted Alpine."
+description: "Rootless Podman workflows in the agent's container environment and host Podman socket integration."
 ---
 
 # Podman
@@ -8,48 +8,49 @@ description: "Build and run OCI images with rootless Podman in restricted Alpine
 Use the dedicated `podman` user and fully qualified image refs only:
 `docker.io/library/alpine:latest`, `localhost/name:tag`.
 
-## Setup (outer root; once)
+## Local rootless Podman
+
+Run the following commands inside your container environment; each invokes
+Podman as the dedicated `podman` user.
+
+### Build and run
 
 ```sh
-apk add podman
-id podman >/dev/null 2>&1 || adduser -D -u 1001 -s /bin/sh podman
-grep -q '^podman:' /etc/subuid 2>/dev/null || printf '%s\n' 'podman:1002:64535' >> /etc/subuid
-grep -q '^podman:' /etc/subgid 2>/dev/null || printf '%s\n' 'podman:1002:64535' >> /etc/subgid
-su - podman -c 'podman system migrate'
+su - podman -c 'podman build -t localhost/my-image:latest /path/context'
+su - podman -c 'podman run --rm docker.io/library/alpine:latest echo OK'
 ```
 
-## Build
+The build context and its `Containerfile`, `ADD`, and `COPY` sources must be
+readable by `podman`; every parent directory must be searchable (have execute
+permission). Since `su -` changes to `/home/podman`, use an absolute context
+path and avoid paths under `/root`. `mktemp -d` creates a private directory by
+default; create the context as `podman` or adjust its ownership and permissions
+before building.
+
+Use `su - podman -c 'podman ...'` for other local container and image
+operations. Local images belong to the dedicated user's rootless store, separate
+from root storage and the host store accessed via `podman-remote`.
+
+For UID-range diagnostics and host allocation guidance, see
+[UID-range troubleshooting](uid-range-troubleshooting.md).
+
+
+## Host socket (explicit opt-in)
+
+Use the host socket only when the user explicitly requests managing host
+containers or images. The user must start `pic` agent with `--pic-podman` to mount
+`/run/podman/podman.sock` and set `CONTAINER_HOST` inside the container.
+
+The same container and image operations are available as
+`podman-remote <command>`. Run `podman-remote` directly, not through `su -`,
+which clears `CONTAINER_HOST`. Remote commands use the host service and image
+store, separate from the local rootless store. Host-local commands such as
+`podman unshare` and `podman system migrate` must run directly on the host.
+
+Verify access with:
 
 ```sh
-su - podman -c 'podman build --isolation=chroot --network=host -t localhost/my-image:latest /path/context'
+podman-remote info
 ```
 
-## Run
-
-```sh
-su - podman -c 'podman run --rm --network=host --uts=host --pid=host docker.io/library/alpine:latest echo OK'
-```
-
-`--isolation=chroot` is required for builds; `--network=host`, `--uts=host`,
-and `--pid=host` are required for runs here.
-
-## Working container
-
-```sh
-su - podman -c 'podman create --name work --network=host --uts=host --pid=host localhost/my-image:latest'
-su - podman -c 'podman cp /path/src work:/path/dst'
-su - podman -c 'podman start -a work'       # initial command
-su - podman -c 'podman exec work command'   # while running
-su - podman -c 'podman commit work localhost/my-image:changed'
-su - podman -c 'podman rm work'
-```
-
-## Save/load
-
-```sh
-su - podman -c 'podman save --format oci-archive -o /path/image.tar localhost/my-image:latest'
-su - podman -c 'podman load -i /path/image.tar'
-su - podman -c 'podman import /path/rootfs.tar localhost/my-image:latest' # rootfs tar only
-```
-
-Images belong to Podman’s rootless `podman` store, separate from root storage.
+If the socket is unavailable, ask the user to restart with `--pic-podman`.

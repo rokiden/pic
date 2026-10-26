@@ -156,6 +156,7 @@ echo "Starting Podman container: ${CONTAINER_NAME}..."
 echo "Mounting $MOUNT_SRC to ${CONTAINER_WORKDIR}..."
 
 podman run -it --rm --network host \
+    --device /dev/fuse \
     --entrypoint "$ENTRYPOINT" \
     --cpus "$CPU" --memory="$MEM" --memory-swap="$MEM" \
     --log-driver=none \
